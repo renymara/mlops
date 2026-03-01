@@ -45,14 +45,8 @@ class ClusteringEstimator:
         # Define o modelo base
         model = KMeans()
 
-        # Cria um visualizer 
-        visualizer = KElbowVisualizer(model, k=(1,50))
-
-        # Treino vários modelos de clustering
-        visualizer.fit(input_points)
-
         # Define o número de clusters
-        n_clusters = visualizer.elbow_value_
+        n_clusters = 5
 
         # Treina o modelo de clustering
         model = KMeans(n_clusters = n_clusters, random_state = 0).fit(input_points)

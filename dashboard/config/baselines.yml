@@ -1,0 +1,58 @@
+# Configuração de Baselines para Monitoramento de Modelos
+# =========================================================
+# Este arquivo define as métricas baseline de cada modelo/experimento
+
+experiments:
+  # Experimento 1: Clustering de Regiões de Entrega
+  mlops-experiment:
+    name: "Delivery Region Clustering"
+    description: "Modelo de clustering K-means para regiões de entrega"
+    model_type: "clustering"
+    handler: "delivery_region_handler"
+    trace_name: "predict_delivery_region"  # Filtra apenas traces deste endpoint
+    
+    baseline_metrics:
+      - metric_name: "coverage_rate"
+        metric_description: "Taxa de cobertura das entregas"
+        metric_value: 0.85
+        metric_type: "percentage"
+        alert_threshold: 0.05  # Alerta se desviar mais de 5%
+        
+      - metric_name: "avg_distance_km"
+        metric_description: "Distância média aos centros"
+        metric_value: 3.2
+        metric_type: "continuous"
+        alert_threshold: 0.20  # Alerta se desviar mais de 20%
+        
+      - metric_name: "avg_latency_ms"
+        metric_description: "Latência média de predição"
+        metric_value: 150
+        metric_type: "continuous"
+        alert_threshold: 0.30  # Alerta se desviar mais de 30%
+
+  # Experimento 2: Exemplo de outro modelo (placeholder)
+  # sentiment-analysis:
+  #   name: "Sentiment Analysis"
+  #   description: "Modelo de classificação de sentimentos"
+  #   model_type: "classification"
+  #   handler: "sentiment_handler"
+  #   
+  #   baseline_metrics:
+  #     - metric_name: "accuracy"
+  #       metric_description: "Acurácia do modelo"
+  #       metric_value: 0.92
+  #       metric_type: "percentage"
+  #       alert_threshold: 0.05
+  #     
+  #     - metric_name: "f1_score"
+  #       metric_description: "F1-Score médio"
+  #       metric_value: 0.89
+  #       metric_type: "percentage"
+  #       alert_threshold: 0.05
+
+# Configurações globais
+global_settings:
+  default_alert_threshold: 0.10
+  min_samples_for_analysis: 40
+  cache_ttl_seconds: 300
+  evidently_enabled: true

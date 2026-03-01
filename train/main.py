@@ -98,7 +98,7 @@ def main(env):
     # Create an instance of your custom model
     custom_model = CustomModel(env = 'PROD')
 
-    mlflow.set_tracking_uri("http://localhost:5000")
+    mlflow.set_tracking_uri("http://localhost:5010")
     mlflow.set_experiment(custom_model.app_config['ALL']['experiment_name'])
 
     with mlflow.start_run() as run:

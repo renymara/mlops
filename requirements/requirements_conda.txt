@@ -1,7 +1,6 @@
 jupyterlab
 numpy
 scikit-learn
-yellowbrick
 folium
 geopy
 fastapi
