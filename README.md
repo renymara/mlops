@@ -1,4 +1,11 @@
+
 # Projeto MLOps com MLFlow
+
+> **Atenção usuários Windows:**
+>
+> Antes de seguir as instruções abaixo, recomenda-se configurar o WSL (Windows Subsystem for Linux) para garantir compatibilidade total com Docker, Conda e comandos Linux. Siga o guia:
+>
+> [Guia de instalação e uso do WSL](docs/WSL.md)
 
 ## Pré-requisitos
 
