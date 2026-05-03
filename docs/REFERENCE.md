@@ -12,8 +12,8 @@ docker compose logs
 # Ver logs do MLflow (em tempo real)
 docker compose logs -f mlflow-server
 
-# Ver logs do MinIO
-docker compose logs -f minio
+# Ver logs do CloudServer (object storage)
+docker compose logs -f cloudserver
 
 # Ver logs de um serviço específico
 docker logs NOME_DO_CONTAINER
@@ -30,7 +30,7 @@ docker compose down
 
 # Reiniciar um serviço específico
 docker compose restart mlflow-server
-docker compose restart minio
+docker compose restart cloudserver
 docker compose restart postgres
 
 # Reconstruir e iniciar
@@ -193,7 +193,7 @@ git branch -d feature/nova-funcionalidade
 | Serviço | URL | Credenciais |
 |---------|-----|-------------|
 | MLflow UI | http://localhost:5010 | - |
-| MinIO Console | http://localhost:9001 | user / password |
+| CloudServer (S3 API) | http://localhost:9000 | user / password |
 | Postgres (MLflow) | localhost:5433 | user / password |
 | Postgres (MLOps) | localhost:5434 | mlops_user / admin |
 
@@ -203,8 +203,8 @@ git branch -d feature/nova-funcionalidade
 # Testar MLflow
 curl http://localhost:5010/health
 
-# Testar MinIO
-curl http://localhost:9001
+# Testar CloudServer (retorna 200 se saudável)
+curl -s -o /dev/null -w "%{http_code}" http://localhost:9000/_/healthcheck
 
 # Testar Postgres (MLflow)
 psql -h localhost -p 5433 -U user -d db
@@ -218,5 +218,35 @@ psql -h localhost -p 5434 -U mlops_user -d mlops_db
 ```bash
 docker compose restart mlflow-server
 docker compose logs mlflow-server
+```
+
+### Listar arquivos no CloudServer
+
+O CloudServer não tem interface web. Para navegar nos buckets, entre no container em modo interativo:
+
+```bash
+# Entrar no container com AWS CLI
+docker compose run --rm \
+  -e AWS_ACCESS_KEY_ID=user \
+  -e AWS_SECRET_ACCESS_KEY=password \
+  -e AWS_DEFAULT_REGION=us-east-1 \
+  --entrypoint sh \
+  cloudserver-create-bucket
+```
+
+Dentro do container, use os comandos abaixo:
+
+```bash
+# Listar buckets
+aws --endpoint-url http://cloudserver:8000 s3 ls
+
+# Listar conteúdo do bucket de artefatos
+aws --endpoint-url http://cloudserver:8000 s3 ls s3://bucket
+
+# Listar recursivamente (todos os artefatos)
+aws --endpoint-url http://cloudserver:8000 s3 ls s3://bucket --recursive
+
+# Sair do container
+exit
 ```
 

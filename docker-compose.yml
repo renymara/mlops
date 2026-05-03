@@ -1,34 +1,33 @@
 version: "3"
 services:
 
-  minio:
-    image: minio/minio
-    expose:
-      - "9000"
+  cloudserver:
+    image: zenko/cloudserver
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9000:8000"
     environment:
-      MINIO_ROOT_USER: user
-      MINIO_ROOT_PASSWORD: password
+      SCALITY_ACCESS_KEY_ID: user
+      SCALITY_SECRET_ACCESS_KEY: password
+      LOG_LEVEL: info
+      REMOTE_MANAGEMENT_DISABLE: 1
+      ENDPOINT: cloudserver
     healthcheck:
-      test: timeout 5s bash -c ':> /dev/tcp/127.0.0.1/9000' || exit 1
-      interval: 1s
+      test: [ "CMD", "curl", "-sf", "http://localhost:8000/_/healthcheck" ]
+      interval: 5s
       timeout: 10s
-      retries: 5
-    command: server /data --console-address ":9001"
+      retries: 10
 
-  minio-create-bucket:
-    image: minio/mc
+  cloudserver-create-bucket:
+    image: amazon/aws-cli
     depends_on:
-      minio:
+      cloudserver:
         condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: user
+      AWS_SECRET_ACCESS_KEY: password
+      AWS_DEFAULT_REGION: us-east-1
     entrypoint: >
-      sh -c " mc alias set minio http://minio:9000 user password && if mc ls minio/bucket > /dev/null 2>&1; then
-        echo 'bucket already exists'
-      else
-        mc mb minio/bucket
-      fi "
+      sh -c "aws --endpoint-url http://cloudserver:8000 s3 mb s3://bucket || aws --endpoint-url http://cloudserver:8000 s3 ls s3://bucket"
 
   postgres:
     image: postgres
@@ -50,7 +49,7 @@ services:
       context: .
       dockerfile: "${DOCKERFILE:-Dockerfile}"
     depends_on:
-      minio-create-bucket:
+      cloudserver-create-bucket:
         condition: service_completed_successfully
       postgres:
         condition: service_healthy
@@ -59,7 +58,7 @@ services:
     ports:
       - "5010:5010"
     environment:
-      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      MLFLOW_S3_ENDPOINT_URL: http://cloudserver:8000
       AWS_ACCESS_KEY_ID: user
       AWS_SECRET_ACCESS_KEY: password
       MLFLOW_TRACKING_URI: http://localhost:5010
