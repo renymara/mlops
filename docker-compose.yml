@@ -1,33 +1,6 @@
-version: "3"
+version: "3.8"
+
 services:
-
-  cloudserver:
-    image: zenko/cloudserver
-    ports:
-      - "9000:8000"
-    environment:
-      SCALITY_ACCESS_KEY_ID: user
-      SCALITY_SECRET_ACCESS_KEY: password
-      LOG_LEVEL: info
-      REMOTE_MANAGEMENT_DISABLE: 1
-      ENDPOINT: cloudserver
-    healthcheck:
-      test: [ "CMD", "curl", "-sf", "http://localhost:8000/_/healthcheck" ]
-      interval: 5s
-      timeout: 10s
-      retries: 10
-
-  cloudserver-create-bucket:
-    image: amazon/aws-cli
-    depends_on:
-      cloudserver:
-        condition: service_healthy
-    environment:
-      AWS_ACCESS_KEY_ID: user
-      AWS_SECRET_ACCESS_KEY: password
-      AWS_DEFAULT_REGION: us-east-1
-    entrypoint: >
-      sh -c "aws --endpoint-url http://cloudserver:8000 s3 mb s3://bucket || aws --endpoint-url http://cloudserver:8000 s3 ls s3://bucket"
 
   postgres:
     image: postgres
@@ -39,29 +12,43 @@ services:
     ports:
       - "5433:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -d db -U user" ]
+      test: ["CMD-SHELL", "pg_isready -d db -U user"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  minio:
+    image: minio/minio
+    container_name: mlops-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: user
+      MINIO_ROOT_PASSWORD: password
+    command: server /data --console-address ":9001"
 
   mlflow-server:
     build:
       context: .
       dockerfile: "${DOCKERFILE:-Dockerfile}"
     depends_on:
-      cloudserver-create-bucket:
-        condition: service_completed_successfully
       postgres:
         condition: service_healthy
-    expose:
-      - "5010"
+      minio:
+        condition: service_started
     ports:
       - "5010:5010"
     environment:
-      MLFLOW_S3_ENDPOINT_URL: http://cloudserver:8000
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
       AWS_ACCESS_KEY_ID: user
       AWS_SECRET_ACCESS_KEY: password
       MLFLOW_TRACKING_URI: http://localhost:5010
     command: >
-      mlflow server --host 0.0.0.0 --port 5010 --backend-store-uri postgresql://user:password@postgres:5432/db --default-artifact-root s3://bucket --gunicorn-opts "--log-level debug"
+      mlflow server
+      --host 0.0.0.0
+      --port 5010
+      --backend-store-uri postgresql://user:password@postgres:5432/db
+      --default-artifact-root s3://bucket
+      --gunicorn-opts "--log-level debug"
     restart: unless-stopped
