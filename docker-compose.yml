@@ -3,7 +3,7 @@ version: "3.8"
 services:
 
   postgres:
-    image: postgres
+    image: postgres:15
     restart: always
     environment:
       POSTGRES_DB: db
@@ -11,6 +11,8 @@ services:
       POSTGRES_PASSWORD: password
     ports:
       - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d db -U user"]
       interval: 5s
@@ -27,6 +29,8 @@ services:
       MINIO_ROOT_USER: user
       MINIO_ROOT_PASSWORD: password
     command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
 
   mlflow-server:
     build:
@@ -43,7 +47,7 @@ services:
       MLFLOW_S3_ENDPOINT_URL: http://minio:9000
       AWS_ACCESS_KEY_ID: user
       AWS_SECRET_ACCESS_KEY: password
-      MLFLOW_TRACKING_URI: http://localhost:5010
+      MLFLOW_TRACKING_URI: http://mlflow-server:5010
     command: >
       mlflow server
       --host 0.0.0.0
@@ -52,3 +56,21 @@ services:
       --default-artifact-root s3://bucket
       --gunicorn-opts "--log-level debug"
     restart: unless-stopped
+
+  minio-init:
+    image: amazon/aws-cli
+    depends_on:
+      - minio
+    restart: "no"
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5 &&
+      aws --endpoint-url http://minio:9000 s3 mb s3://bucket || true
+      "
+    environment:
+      AWS_ACCESS_KEY_ID: user
+      AWS_SECRET_ACCESS_KEY: password
+
+volumes:
+  postgres_data:
+  minio_data:
